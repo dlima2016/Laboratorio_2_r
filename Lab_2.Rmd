@@ -1,0 +1,108 @@
+---
+title: "Laboratorio 2"
+output: html_notebook
+author: Diana Gutierrez
+---
+
+```{r}
+#LIBRERIAS A UTILIZAR
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(nycflights13)
+```
+```{r}
+#VISUALIZACION DE LAS TABLAS
+view(flights)
+view(airports)
+view(planes)
+view(airlines)
+view(weather)
+```
+1. INNER-JOIN
+```{r}
+
+
+#FLIGHTS- PLANES
+flights%>%
+  inner_join(planes, by="tailnum")
+
+#FLIGHTS - AIRLINES
+flights%>%
+  inner_join(airlines, by="carrier")
+
+#FLIGHTS-AIRPORTS
+flights%>%
+  inner_join(airports, by= c("origin"="faa"))%>%
+  inner_join(airports, by= c("dest"="faa")) 
+
+#FLIGHTS-WEATHER
+flights%>%
+  inner_join(weather, by=c("year", "month", "day", "hour", "origin"))
+  
+```
+
+2. DATA MANIPULATION
+```{r}
+# 2.1
+
+flights%>%
+  count(year, month, day)%>%
+  filter(n>1000)%>%
+  arrange(n)
+```
+```{r}
+# 2.2
+
+flights_selected <- flights%>%
+  select(year:day, hour, origin, dest, tailnum, carrier, arr_delay, dep_delay)
+
+flights_selected
+```
+```{r}
+# 2.3
+
+airlines%>%
+  left_join(flights_selected, by="carrier")%>%
+  select(-origin, -dest)%>%
+  mutate(tot_delay=arr_delay+dep_delay)
+
+```
+```{r}
+# 2.4
+precip_delay <- flights%>%
+  inner_join(weather, by=c("year", "month", "day", "hour", "origin"))%>%
+  group_by(precip)%>%
+  summarize(delay=mean(dep_delay, na.rm=TRUE))%>%
+  replace_na(list(delay=0))
+
+precip_delay
+```
+```{r}
+# 2.5
+
+ggplot(precip_delay, aes(x=precip, y=delay)) + geom_point() + labs(x="Precip", y="Delay")
+```
+
+```{r}
+# 2.6
+
+flights_airports<- flights%>%
+  filter(year==2013 & month==5 & day==10)%>%
+  group_by(dest)%>%
+  summarize(delay=mean(arr_delay, na.rm=TRUE))%>%
+  inner_join(airports, by= c("dest"="faa")) #unicamente se relaciona con el destino dado que se agrupa por esta variable
+
+flights_airports
+```
+```{r}
+# 2.7
+
+ggplot(flights_airports, aes(x=lon, y=lat, color=delay, size=delay)) + geom_point() + labs(x="Longitud", y="Latitud", color="Delay", size="Delay")
+```
+```{r}
+fligths%>%
+  inner_join(planes, by="tailnum", suffix=c("_flights", "planes"))%>%
+  transmute(tailnum, manufacturer, pi=(dep_delay+arr_delay)/air_time)
+```
+
